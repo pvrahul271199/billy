@@ -133,6 +133,7 @@ create table if not exists public.profiles (
   -- Defaults
   invoice_prefix        text not null default 'BLY' check (char_length(invoice_prefix) between 1 and 6),
   default_notes         text,
+  invoice_template      text not null default 'classic' check (invoice_template in ('classic','statement','signature','structured','studio')),
   default_include_bank  boolean not null default true,
   default_include_upi   boolean not null default true,
   default_include_sign  boolean not null default true,
@@ -308,6 +309,7 @@ create table if not exists public.invoices (
   include_bank          boolean not null default true,
   include_upi_qr        boolean not null default true,
   include_signature     boolean not null default true,
+  template              text check (template is null or template in ('classic','statement','signature','structured','studio')),
 
   -- Lifecycle
   sent_at               timestamptz,

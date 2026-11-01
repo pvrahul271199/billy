@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { Address, Invoice, Party, PaymentDetails, Preset, Profile } from "@/types";
 import { DEFAULT_PREFIX } from "@/lib/numbering";
+import { DEFAULT_TEMPLATE } from "@/lib/invoice-templates";
 
 /** Key/value store for app state such as the autosaved invoice form. */
 export interface KV {
@@ -63,6 +64,7 @@ export function defaultProfile(): Profile {
     defaultTdsRate: null,
     invoicePrefix: DEFAULT_PREFIX,
     defaultNotes: "",
+    invoiceTemplate: DEFAULT_TEMPLATE,
     onboardedAt: null,
     updatedAt: now(),
   };

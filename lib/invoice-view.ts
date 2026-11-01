@@ -1,13 +1,15 @@
-import type { Address, BillToSnapshot, FromSnapshot, Invoice, Party, PaymentDetails, PaymentSnapshot, Profile, Totals } from "@/types";
+import type { Address, BillToSnapshot, InvoiceTemplateId, FromSnapshot, Invoice, Party, PaymentDetails, PaymentSnapshot, Profile, Totals } from "@/types";
 import { amountInWords } from "./amount-in-words";
 import { formatDate, paymentTermsLabel } from "./dates";
 import { formatInstagram, formatINR } from "./format";
 import { stateName } from "./states";
 import { computeTotals, formatRate, lineAmount } from "./tax";
 import { formatPhone } from "./validators";
+import { resolveTemplate } from "./invoice-templates";
 import { snapshotBillTo, snapshotFrom, snapshotPayment } from "./snapshots";
 
 export interface InvoiceView {
+  template: InvoiceTemplateId;
   title: "Invoice" | "Tax Invoice";
   number: string;
   meta: Array<{ label: string; value: string }>;
@@ -124,6 +126,7 @@ export function buildInvoiceView(inv: Invoice, src: ViewSources): InvoiceView {
       : null;
 
   return {
+    template: resolveTemplate(inv.template, src.profile.invoiceTemplate),
     title: isTax ? "Tax Invoice" : "Invoice",
     number: inv.number,
     meta,

@@ -26,6 +26,7 @@ import {
   CreatorScreen,
   ImagesScreen,
   NotesScreen,
+  TemplatesScreen,
   PrefixScreen,
   PresetsScreen,
   TaxScreen,
@@ -53,6 +54,8 @@ function renderRoute(route: Route): ReactNode {
       return <PresetsScreen />;
     case "notes":
       return <NotesScreen />;
+    case "templates":
+      return <TemplatesScreen />;
     case "prefix":
       return <PrefixScreen />;
     case "backup":

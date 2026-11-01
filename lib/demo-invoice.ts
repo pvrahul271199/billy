@@ -12,6 +12,7 @@ const items = [
 export function demoInvoiceView(): InvoiceView {
   const totals = computeTotals(items, { gstMode: "intra", gstRate: 18, showTds: false, tdsRate: null });
   return {
+    template: "classic",
     title: "Tax Invoice",
     number: "BLY/26-27/001",
     meta: [

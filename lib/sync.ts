@@ -12,6 +12,7 @@
  */
 import type { Address, Invoice, LineItem, Party, PaymentDetails, Preset, Profile } from "@/types";
 import { amountInWords } from "./amount-in-words";
+import { DEFAULT_TEMPLATE, isTemplateId } from "./invoice-templates";
 import { computeTotals } from "./tax";
 
 type Row = Record<string, unknown>;
@@ -61,6 +62,7 @@ export function profileToRow(p: Profile, userId: string): Row {
     default_tds_rate: p.defaultTdsRate,
     invoice_prefix: p.invoicePrefix,
     default_notes: blank(p.defaultNotes),
+    invoice_template: p.invoiceTemplate,
     onboarded_at: p.onboardedAt,
     updated_at: p.updatedAt,
   };
@@ -83,6 +85,7 @@ export function profileFromRow(r: Row, images: Pick<Profile, "photo" | "logo" | 
     defaultTdsRate: r.default_tds_rate === null || r.default_tds_rate === undefined ? null : Number(r.default_tds_rate),
     invoicePrefix: str(r.invoice_prefix) || "BLY",
     defaultNotes: str(r.default_notes),
+    invoiceTemplate: isTemplateId(r.invoice_template) ? r.invoice_template : DEFAULT_TEMPLATE,
     onboardedAt: (r.onboarded_at as string | null) ?? null,
     updatedAt: str(r.updated_at),
   };
@@ -216,6 +219,7 @@ export function invoiceToRows(inv: Invoice, userId: string): { invoice: Row; ite
       include_bank: inv.includeBank,
       include_upi_qr: inv.includeUpiQr,
       include_signature: inv.includeSignature,
+      template: inv.template,
       sent_at: inv.sentAt,
       paid_date: inv.paidDate,
       created_at: inv.createdAt,
@@ -265,6 +269,7 @@ export function invoiceFromRows(r: Row, itemRows: Row[]): Invoice {
     includeBank: !!r.include_bank,
     includeUpiQr: !!r.include_upi_qr,
     includeSignature: !!r.include_signature,
+    template: isTemplateId(r.template) ? r.template : null,
     fromSnapshot: (r.from_snapshot as Invoice["fromSnapshot"]) ?? null,
     billToSnapshot: (r.bill_to_snapshot as Invoice["billToSnapshot"]) ?? null,
     paymentSnapshot: (r.payment_snapshot as Invoice["paymentSnapshot"]) ?? null,

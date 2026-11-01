@@ -28,6 +28,7 @@ const inv: Invoice = {
   includeBank: true,
   includeUpiQr: true,
   includeSignature: false,
+  template: null,
   fromSnapshot: null,
   billToSnapshot: null,
   paymentSnapshot: null,
@@ -57,6 +58,15 @@ describe("invoice mapping", () => {
   it("round-trips back to the same invoice", () => {
     const { invoice, items } = invoiceToRows(inv, "u1");
     expect(invoiceFromRows(invoice, [...items].reverse())).toEqual(inv);
+  });
+});
+
+describe("template mapping", () => {
+  it("round-trips a chosen template and treats unknown values as unset", () => {
+    const { invoice, items } = invoiceToRows({ ...inv, template: "studio" }, "u1");
+    expect(invoice.template).toBe("studio");
+    expect(invoiceFromRows(invoice, items).template).toBe("studio");
+    expect(invoiceFromRows({ ...invoice, template: "bogus" }, items).template).toBeNull();
   });
 });
 

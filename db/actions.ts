@@ -2,6 +2,7 @@ import type { BillToSnapshot, FromSnapshot, Invoice, Party, PaymentDetails, Paym
 import { DEFAULT_PREFIX, financialYear, nextInvoiceNumber, sanitizePrefix } from "@/lib/numbering";
 import { remoteInvoiceNumbers } from "@/lib/remote-numbers";
 import { dueDateFor, todayISO } from "@/lib/dates";
+import { resolveTemplate } from "@/lib/invoice-templates";
 import { DEFAULT_GST_RATE, gstModeFor } from "@/lib/tax";
 import { db, defaultPayment, defaultProfile, emptyAddress, now, uuid } from "./schema";
 import { snapshotBillTo, snapshotFrom, snapshotPayment } from "@/lib/snapshots";
@@ -24,6 +25,21 @@ export async function getPayment(): Promise<PaymentDetails> {
 export async function saveProfile(patch: Partial<Omit<Profile, "id">>): Promise<void> {
   const current = await getProfile();
   await db.profile.put({ ...current, ...patch, id: "me", updatedAt: now() });
+  if (patch.signature && !current.signature) await enableSignatureOnDrafts();
+}
+
+/**
+ * First signature added: turn it on for drafts started without one. The toggle
+ * is disabled until a signature exists, so "off" on those drafts was never a choice.
+ */
+async function enableSignatureOnDrafts(): Promise<void> {
+  const drafts = (await db.invoices.toArray()).filter((i) => i.status === "draft" && !i.deletedAt && !i.includeSignature);
+  await Promise.all(drafts.map((i) => saveInvoice({ ...i, includeSignature: true })));
+  const form = await db.kv.get("invoiceForm");
+  const value = form?.value as { invoice?: Invoice } | undefined;
+  if (value?.invoice && !value.invoice.includeSignature) {
+    await db.kv.put({ key: "invoiceForm", value: { ...value, invoice: { ...value.invoice, includeSignature: true } } });
+  }
 }
 
 export async function savePayment(patch: Partial<Omit<PaymentDetails, "id">>): Promise<void> {
@@ -160,7 +176,8 @@ export async function newInvoice(): Promise<Invoice> {
     notes: profile.defaultNotes,
     includeBank: !!(payment.accountNumber && payment.ifsc),
     includeUpiQr: !!(payment.upiId || payment.staticQr),
-    includeSignature: !!profile.signature,
+    includeSignature: true,
+    template: null,
     fromSnapshot: null,
     billToSnapshot: null,
     paymentSnapshot: null,
@@ -185,6 +202,7 @@ async function withSnapshots(inv: Invoice): Promise<Invoice> {
   ]);
   return {
     ...inv,
+    template: resolveTemplate(inv.template, profile.invoiceTemplate),
     fromSnapshot: snapshotFrom(profile),
     billToSnapshot: party ? snapshotBillTo(party) : inv.billToSnapshot,
     paymentSnapshot: snapshotPayment(payment),

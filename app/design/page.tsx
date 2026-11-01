@@ -2,6 +2,11 @@
 
 import { useState, type ReactNode } from "react";
 import { CheckCircle, DownloadSimple, MagnifyingGlass, Plus, Receipt, ShareNetwork, WarningCircle } from "@phosphor-icons/react";
+import { InvoiceSheet } from "@/components/invoice/InvoiceSheet";
+import { TemplatePicker } from "@/components/invoice/TemplatePicker";
+import { demoInvoiceView } from "@/lib/demo-invoice";
+import { TEMPLATES } from "@/lib/invoice-templates";
+import type { InvoiceTemplateId } from "@/types";
 import {
   Amount,
   AmountField,
@@ -125,6 +130,7 @@ function Showcase() {
   const [typed, setTyped] = useState("48500");
   const [tab, setTab] = useState<Tab>("invoice");
   const [state, setState] = useState("");
+  const [template, setTemplate] = useState<InvoiceTemplateId>("classic");
 
   return (
     <div className="mx-auto max-w-3xl px-5 pt-10 pb-32">
@@ -456,6 +462,18 @@ function Showcase() {
             <span>
               <span className="num">{formatINR(6903000)}</span> overdue across 1 invoice
             </span>
+          </div>
+        </Section>
+
+        <Section id="templates" title="Invoice templates" intro="Five layouts, all black on white with thin rules and no filled areas, so they print cleanly. Each has a preview layout in components/invoice/sheet and a matching PDF layout in components/invoice/pdf.">
+          <TemplatePicker value={template} onChange={setTemplate} />
+          <div className="mt-8 grid gap-6 sm:grid-cols-2">
+            {TEMPLATES.map((t) => (
+              <div key={t.id}>
+                <p className="mb-2 text-[13px] font-semibold text-soft">{t.name}</p>
+                <InvoiceSheet view={{ ...demoInvoiceView(), template: t.id }} />
+              </div>
+            ))}
           </div>
         </Section>
 

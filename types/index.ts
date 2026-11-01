@@ -17,6 +17,9 @@ export type PaymentTerms = "due_on_receipt" | "net_7" | "net_15" | "net_30" | "c
 /** none: not GST registered. intra: CGST + SGST. inter: IGST. */
 export type GstMode = "none" | "intra" | "inter";
 
+/** Invoice layout. See lib/invoice-templates.ts. */
+export type InvoiceTemplateId = "classic" | "statement" | "signature" | "structured" | "studio";
+
 export interface Address {
   line1: string;
   line2: string;
@@ -46,6 +49,8 @@ export interface Profile {
   defaultTdsRate: number | null;
   invoicePrefix: string;
   defaultNotes: string;
+  /** Template new invoices use unless they pick their own. */
+  invoiceTemplate: InvoiceTemplateId;
   onboardedAt: string | null;
   updatedAt: string;
 }
@@ -143,6 +148,8 @@ export interface Invoice {
   includeBank: boolean;
   includeUpiQr: boolean;
   includeSignature: boolean;
+  /** Null follows the creator's default template. Frozen when the invoice is sent. */
+  template: InvoiceTemplateId | null;
   fromSnapshot: FromSnapshot | null;
   billToSnapshot: BillToSnapshot | null;
   paymentSnapshot: PaymentSnapshot | null;

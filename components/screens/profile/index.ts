@@ -9,4 +9,5 @@ export { ImagesScreen } from "./Images";
 export { NotesScreen } from "./Notes";
 export { PrefixScreen } from "./Prefix";
 export { PresetsScreen } from "./Presets";
+export { TemplatesScreen } from "./Templates";
 export { TaxScreen } from "./Tax";

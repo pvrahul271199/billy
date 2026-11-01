@@ -16,6 +16,7 @@ export type Route =
   | { name: "brand-edit"; id?: string }
   | { name: "presets" }
   | { name: "notes" }
+  | { name: "templates" }
   | { name: "prefix" }
   | { name: "backup" }
   | { name: "about" }

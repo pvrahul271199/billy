@@ -112,6 +112,8 @@ Sentence case. Buttons verb-first, 1–3 words. No exclamation marks, no "please
 
 **Look:** formal and plain. Pure black text on white, grey secondary text, thin black rules, no filled backgrounds, no app colours. Uses the `print` tokens (`text-print`, `text-print-soft`, `border-print-line`), never `ink`/`tint` inside the sheet.
 
+**Templates:** five layouts (`classic | statement | signature | structured | studio`), listed in `lib/invoice-templates.ts`. Each has an HTML layout in `components/invoice/sheet/` and a matching react-pdf layout in `components/invoice/pdf/` (shared pieces in `parts.tsx`); `InvoiceSheet` and `InvoicePdf` only pick the layout. All stay black on white with thin rules and **no filled areas** (no black bars or grey bands), so they print cleanly and photocopy well. Classic is the default. The creator's default is `Profile.invoiceTemplate` (Profile > Invoice template); `Invoice.template` overrides it (preview > More actions > Change template) and is frozen when the invoice is marked sent. Unknown or retired ids fall back to Classic. Synced as `profiles.invoice_template` and `invoices.template` (`supabase/migrations/002_invoice_templates.sql`).
+
 `lib/invoice-view.ts` builds one display model used by `InvoiceSheet` (HTML) and `InvoicePdf` (react-pdf). They mirror each other point for point; change both together. The PDF stays black on white and uses Inter from `public/fonts` (latin + latin-ext fallback for ₹; Figtree/Bricolage are not verified for ₹ in react-pdf). Drafts render live data; "Mark as sent" freezes from/bill-to/payment snapshots (`lib/snapshots.ts`). Actions pre-generate the PDF so Web Share runs within the tap.
 
 ## Settings forms

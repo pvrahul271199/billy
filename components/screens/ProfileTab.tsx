@@ -1,9 +1,10 @@
 "use client";
 
-import { Bank, Buildings, DownloadSimple, FileText, Hash, Image as ImageIcon, Info, ListBullets, Percent, User, UserCircle } from "@phosphor-icons/react";
+import { Bank, Buildings, DownloadSimple, FileText, Hash, Layout, Image as ImageIcon, Info, ListBullets, Percent, User, UserCircle } from "@phosphor-icons/react";
 import { Avatar, ListGroup, ListRow } from "@/components/ui";
 import { useParties, usePayment, usePresets, useProfile } from "@/db/queries";
 import { formatInstagram } from "@/lib/format";
+import { templateSpec } from "@/lib/invoice-templates";
 import { useNav } from "@/lib/nav";
 import { useAuth } from "@/lib/auth";
 import { isSyncConfigured } from "@/lib/sync";
@@ -63,6 +64,7 @@ export function ProfileTab() {
           <ListRow icon={Buildings} title="Brands and agencies" value={parties ? String(parties.length) : ""} onClick={() => nav.push({ name: "brands" })} />
           <ListRow icon={ListBullets} title="Saved line items" value={presets ? String(presets.length) : ""} onClick={() => nav.push({ name: "presets" })} />
           <ListRow icon={FileText} title="Default notes and terms" description={profile.defaultNotes || "Not set"} onClick={() => nav.push({ name: "notes" })} />
+          <ListRow icon={Layout} title="Invoice template" description="Choose how your invoices look" value={templateSpec(profile.invoiceTemplate).name} onClick={() => nav.push({ name: "templates" })} />
           <ListRow icon={Hash} title="Invoice number prefix" value={profile.invoicePrefix} onClick={() => nav.push({ name: "prefix" })} />
         </ListGroup>
 

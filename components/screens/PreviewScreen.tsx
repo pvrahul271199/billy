@@ -6,6 +6,7 @@ import {
   CheckCircle,
   Copy,
   DotsThreeVertical,
+  Layout,
   DownloadSimple,
   PaperPlaneTilt,
   PencilSimple,
@@ -13,7 +14,9 @@ import {
 } from "@phosphor-icons/react";
 import { BottomSheet, Button, DestructiveButton, IconButton, StatusPill } from "@/components/ui";
 import { InvoiceSheet } from "@/components/invoice/InvoiceSheet";
+import { TemplatePicker } from "@/components/invoice/TemplatePicker";
 import { EditSentDialog, MarkPaidSheet, useInvoiceActions } from "@/components/invoice/InvoiceActions";
+import { saveInvoice } from "@/db";
 import { useInvoice, useParties, usePayment, useProfile, useToday } from "@/db/queries";
 import { formatDate } from "@/lib/dates";
 import { buildInvoiceView } from "@/lib/invoice-view";
@@ -33,6 +36,7 @@ export function PreviewScreen({ id }: { id: string }) {
   const [paidOpen, setPaidOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [editWarn, setEditWarn] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
 
   const view = useMemo(() => {
     if (!invoice || !profile || !payment || !parties) return null;
@@ -126,6 +130,17 @@ export function PreviewScreen({ id }: { id: string }) {
         <div className="flex flex-col gap-2 pt-1">
           <Button
             variant="tint"
+            icon={Layout}
+            fullWidth
+            onClick={() => {
+              setMoreOpen(false);
+              setTemplateOpen(true);
+            }}
+          >
+            Change template
+          </Button>
+          <Button
+            variant="tint"
             icon={Copy}
             fullWidth
             onClick={() => {
@@ -160,6 +175,18 @@ export function PreviewScreen({ id }: { id: string }) {
           >
             Delete
           </DestructiveButton>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={templateOpen} onClose={() => setTemplateOpen(false)} title="Invoice template">
+        <div className="max-h-[60dvh] overflow-y-auto pb-2">
+          <TemplatePicker
+            value={view.template}
+            onChange={(template) => {
+              void saveInvoice({ ...invoice, template });
+              setTemplateOpen(false);
+            }}
+          />
         </div>
       </BottomSheet>
 
