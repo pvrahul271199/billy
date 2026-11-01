@@ -1,5 +1,6 @@
 import type { BillToSnapshot, FromSnapshot, Invoice, Party, PaymentDetails, PaymentSnapshot, Preset, Profile } from "@/types";
-import { financialYear, nextInvoiceNumber } from "@/lib/numbering";
+import { DEFAULT_PREFIX, financialYear, nextInvoiceNumber, sanitizePrefix } from "@/lib/numbering";
+import { remoteInvoiceNumbers } from "@/lib/remote-numbers";
 import { dueDateFor, todayISO } from "@/lib/dates";
 import { DEFAULT_GST_RATE, gstModeFor } from "@/lib/tax";
 import { db, defaultPayment, defaultProfile, emptyAddress, now, uuid } from "./schema";
@@ -116,6 +117,22 @@ export async function allInvoiceNumbers(excludeId?: string): Promise<string[]> {
   return all.filter((i) => !i.deletedAt && i.id !== excludeId).map((i) => i.number);
 }
 
+/**
+ * Numbers the sequence must never reuse: every live invoice, plus deleted ones
+ * that were already sent (a number given to a brand stays taken). Deleted drafts free theirs.
+ */
+export async function usedNumbersForSequence(excludeId?: string): Promise<string[]> {
+  const all = await db.invoices.toArray();
+  return all.filter((i) => i.id !== excludeId && (!i.deletedAt || i.sentAt)).map((i) => i.number);
+}
+
+/** Local numbers plus, when online, numbers from other devices on the same account. */
+export async function sequenceNumbers(prefix: string, date: string, excludeId?: string): Promise<string[]> {
+  const head = `${sanitizePrefix(prefix) || DEFAULT_PREFIX}/${financialYear(date)}/`;
+  const [local, remote] = await Promise.all([usedNumbersForSequence(excludeId), remoteInvoiceNumbers(head, excludeId)]);
+  return [...local, ...remote];
+}
+
 /** A fresh invoice pre-filled from the creator's defaults. Not saved. */
 export async function newInvoice(): Promise<Invoice> {
   const [profile, payment] = await Promise.all([getProfile(), getPayment()]);
@@ -123,7 +140,7 @@ export async function newInvoice(): Promise<Invoice> {
   const ts = now();
   return {
     id: uuid(),
-    number: nextInvoiceNumber(profile.invoicePrefix, today, await allInvoiceNumbers()),
+    number: nextInvoiceNumber(profile.invoicePrefix, today, await sequenceNumbers(profile.invoicePrefix, today)),
     financialYear: financialYear(today),
     status: "draft",
     invoiceDate: today,
@@ -212,7 +229,7 @@ export async function duplicateInvoice(id: string): Promise<string | null> {
   const copy: Invoice = {
     ...src,
     id: uuid(),
-    number: nextInvoiceNumber(profile.invoicePrefix, today, await allInvoiceNumbers()),
+    number: nextInvoiceNumber(profile.invoicePrefix, today, await sequenceNumbers(profile.invoicePrefix, today)),
     financialYear: financialYear(today),
     status: "draft",
     invoiceDate: today,

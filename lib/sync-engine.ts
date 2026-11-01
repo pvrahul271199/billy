@@ -30,6 +30,8 @@ import {
   profileToRow,
 } from "./sync";
 import { supabase } from "./supabase";
+import { nextInvoiceNumber } from "./numbering";
+import { remoteInvoiceNumbers } from "./remote-numbers";
 import { hasSkippedSignIn } from "./auth";
 
 type Row = Record<string, unknown>;
@@ -219,8 +221,22 @@ async function push(uid: string, state: SyncState): Promise<void> {
     upsert("line_item_presets", rows.map((r) => presetToRow(r, uid))),
   );
   await pushTable<Invoice>("invoices", state, await db.invoices.toArray(), async (rows) => {
-    const mapped = rows.map((r) => invoiceToRows(r, uid));
-    await upsert("invoices", mapped.map((m) => m.invoice));
+    let mapped = rows.map((r) => invoiceToRows(r, uid));
+    const { error: bulkError } = await supabase().from("invoices").upsert(mapped.map((m) => m.invoice));
+    if (bulkError) {
+      // Same number used on another phone. An unsent draft can safely take the next free number.
+      const only = rows[0];
+      if (rows.length === 1 && only && bulkError.code === "23505" && !only.sentAt) {
+        const head = `${only.number.split("/").slice(0, 2).join("/")}/`;
+        const used = [...(await db.invoices.toArray()).filter((i) => i.id !== only.id).map((i) => i.number), ...(await remoteInvoiceNumbers(head, only.id))];
+        const renumbered = { ...only, number: nextInvoiceNumber(only.number.split("/")[0]!, only.invoiceDate, used), updatedAt: new Date().toISOString() };
+        await db.invoices.put(renumbered);
+        mapped = [invoiceToRows(renumbered, uid)];
+        await upsert("invoices", mapped.map((m) => m.invoice));
+      } else {
+        throw bulkError;
+      }
+    }
     await upsert("invoice_items", mapped.flatMap((m) => m.items));
     // Items removed locally must go from the cloud too.
     for (const m of mapped) {

@@ -20,7 +20,7 @@ import { LineItemsEditor, type ItemErrors } from "@/components/invoice/LineItems
 import { TotalsCard } from "@/components/invoice/TotalsCard";
 import { PushedScreen, Splash } from "./Screen";
 import { useNav } from "@/lib/nav";
-import { allInvoiceNumbers, db, deleteKV, getKV, newInvoice, now, refreezeSnapshots, saveInvoice, setKV } from "@/db";
+import { allInvoiceNumbers, sequenceNumbers, db, deleteKV, getKV, newInvoice, now, refreezeSnapshots, saveInvoice, setKV } from "@/db";
 import { PAYMENT_TERM_OPTIONS, dueDateFor } from "@/lib/dates";
 import { formatINR } from "@/lib/format";
 import { useParties, usePayment, usePresets, useProfile } from "@/db/queries";
@@ -166,7 +166,7 @@ export function EditorScreen({ id }: { id?: string }) {
     if (!inv || !date) return;
     const patch: Partial<Invoice> = { invoiceDate: date, dueDate: dueDateFor(inv.paymentTerms, date, inv.dueDate) };
     if (!numberEdited && profile) {
-      patch.number = nextInvoiceNumber(profile.invoicePrefix, date, await allInvoiceNumbers(inv.id));
+      patch.number = nextInvoiceNumber(profile.invoicePrefix, date, await sequenceNumbers(profile.invoicePrefix, date, inv.id));
     }
     update(patch);
     clearError("dueDate");
@@ -191,10 +191,10 @@ export function EditorScreen({ id }: { id?: string }) {
   }
 
   // ------------------------------------------------------------ validation
-  async function validate(full: boolean): Promise<EditorErrors> {
+  async function validate(full: boolean, number = inv?.number ?? ""): Promise<EditorErrors> {
     if (!inv) return {};
     const e: EditorErrors = {};
-    e.number = invoiceNumberError(inv.number, await allInvoiceNumbers(inv.id)) ?? undefined;
+    e.number = invoiceNumberError(number, await allInvoiceNumbers(inv.id)) ?? undefined;
     if (full) {
       if (!inv.billToId) e.billTo = "Choose who you're billing";
       if (inv.viaAgency && !inv.endBrandName.trim()) e.endBrandName = "Add the brand this campaign is for";
@@ -238,7 +238,17 @@ export function EditorScreen({ id }: { id?: string }) {
     if (!inv) return;
     setSaving(mode);
     try {
-      const e = await validate(mode === "preview");
+      // Another phone or editor may have taken this number since it was suggested: move to the next free one.
+      let number = inv.number.trim();
+      if (!numberEdited && profile) {
+        const used = await sequenceNumbers(profile.invoicePrefix, inv.invoiceDate, inv.id);
+        if (used.some((n) => n.toLowerCase() === number.toLowerCase())) {
+          number = nextInvoiceNumber(profile.invoicePrefix, inv.invoiceDate, used);
+          update({ number });
+          toast.show(`Invoice number changed to ${number}`);
+        }
+      }
+      const e = await validate(mode === "preview", number);
       const has = Object.entries(e).some(([, v]) => v);
       setErrors(e);
       if (has) {
@@ -248,7 +258,7 @@ export function EditorScreen({ id }: { id?: string }) {
       }
       const record: Invoice = {
         ...inv,
-        number: inv.number.trim(),
+        number,
         gstRate: inv.gstMode === "none" ? 0 : (parsePercent(gstRateText) ?? DEFAULT_GST_RATE),
         tdsRate: parsePercent(tdsText),
       };

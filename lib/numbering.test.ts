@@ -76,3 +76,10 @@ describe("invoiceNumberError", () => {
     expect(invoiceNumberError("INV#1", [])).toMatch(/letters, numbers/);
   });
 });
+
+describe("sequence with deleted sent invoices", () => {
+  it("keeps counting past a number that was already issued", () => {
+    // 003 was sent then deleted: the caller still passes it, so the next is 004, not 003.
+    expect(nextInvoiceNumber("BLY", "2026-11-01", ["BLY/26-27/001", "BLY/26-27/002", "BLY/26-27/003"])).toBe("BLY/26-27/004");
+  });
+});

@@ -100,7 +100,7 @@ Sentence case. Buttons verb-first, 1–3 words. No exclamation marks, no "please
 ## Domain rules (India)
 
 - Money in integer paise; display `en-IN` (`₹1,23,456.00`).
-- Financial year April–March, label `26-27`. Invoice number `<PREFIX>/<FY>/<seq>` (`BLY/26-27/001`), max 16 chars, unique, editable.
+- Financial year April–March, label `26-27`. Invoice number `<PREFIX>/<FY>/<seq>` (`BLY/26-27/001`), max 16 chars, unique, editable. Next number = highest sequence for that prefix and FY + 1 (`nextInvoiceNumber`), counting live invoices and deleted sent ones (`usedNumbersForSequence`), so an issued number is never reused; deleted drafts free theirs. Restarts at 001 each April. Online, the suggestion also checks the cloud (`sequenceNumbers`, `lib/remote-numbers.ts`, 2s timeout, never blocks) so two phones don't pick the same number; saving re-checks and moves to the next free number if it was taken; if two offline phones still collide, sync renumbers the unsent draft automatically (a sent invoice is never renumbered, it shows a sync error to fix by hand).
 - A brand or agency needs only a name. GSTIN, address and contact sit behind "Add GSTIN, address and contact" in `PartyForm`; with no state the split assumes same state.
 - GST only if registered: same state → CGST + SGST (half each), different → IGST; rate editable (default 18). "Tax Invoice" vs "Invoice".
 - TDS is informational (on subtotal), never reduces the total.
