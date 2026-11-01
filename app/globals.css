@@ -1,0 +1,221 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Billy design tokens. Mirrors theme/tokens.ts (keep in sync).
+   Components use the Tailwind utilities mapped below (bg-ink, text-soft, …)
+   or var(--token). Never raw hex values.
+   --------------------------------------------------------------------------- */
+:root {
+  --ink: #1e1b4b;
+  --ink-hover: #2d2a66;
+  --ink-press: #14123a;
+  --ink2: #8b88c2;
+  --soft: #5f5c80;
+  --faint: #a9a7c4;
+  --line: #e4e3f0;
+  --tint: #f5f5fa;
+  --bg: #ffffff;
+  --frame: #eeeef6;
+  --good: #2d2a66;
+  --good-bg: #e6e5f4;
+  --print: #000000;
+  --print-soft: #404040;
+  --print-line: #bfbfbf;
+  --warm: #b45309;
+  --warm-bg: #fdf1e4;
+
+  /* Overlays */
+  --scrim: rgb(30 27 75 / 0.28);
+  --shadow-float: 0 18px 45px -12px rgb(30 27 75 / 0.24);
+  --shadow-chassis: 0 40px 90px -30px rgb(30 27 75 / 0.35), 0 0 0 1px rgb(30 27 75 / 0.06);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tabbar-height: 64px;
+}
+
+@theme inline {
+  --color-*: initial;
+  --color-white: var(--bg);
+  --color-bg: var(--bg);
+  --color-ink: var(--ink);
+  --color-ink-hover: var(--ink-hover);
+  --color-ink-press: var(--ink-press);
+  --color-ink2: var(--ink2);
+  --color-soft: var(--soft);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-tint: var(--tint);
+  --color-frame: var(--frame);
+  --color-good: var(--good);
+  --color-good-bg: var(--good-bg);
+  --color-warm: var(--warm);
+  --color-warm-bg: var(--warm-bg);
+  --color-print: var(--print);
+  --color-print-soft: var(--print-soft);
+  --color-print-line: var(--print-line);
+  --color-scrim: var(--scrim);
+
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-num: var(--font-bricolage), var(--font-figtree), ui-sans-serif, sans-serif;
+
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+
+  --radius-phone: 40px;
+  --radius-sheet: 28px;
+  --radius-btn: 16px;
+  --radius-key: 14px;
+  --radius-note: 14px;
+
+  --shadow-*: initial;
+  --shadow-float: var(--shadow-float);
+
+  --animate-sheet-in: sheet-in 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --animate-screen-in: screen-in 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --animate-fade-in: fade-in 180ms ease-out;
+  --animate-pop-in: pop-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  --animate-toast-in: toast-in 200ms ease-out;
+}
+
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes screen-in {
+  from { transform: translateX(28%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+    /* No rubber-banding or pull-to-refresh: screens scroll themselves. */
+    overscroll-behavior: none;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  [role="button"],
+  a {
+    -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  ::placeholder {
+    color: var(--faint);
+    opacity: 1;
+  }
+  ::selection {
+    background: var(--line);
+    color: var(--ink);
+  }
+  /* Keyboard focus on buttons and links. Form fields use border-colour changes instead. */
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Phone chassis. The app is locked to the viewport like a native canvas;
+   each screen manages its own scrolling. On desktop it sits in a phone frame.
+   --------------------------------------------------------------------------- */
+.app-stage {
+  height: 100dvh;
+  overflow: hidden;
+  overflow: clip;
+  background: var(--bg);
+}
+/* overflow: clip (not just hidden) so focusing an input or scrollIntoView can
+   never scroll the chassis itself; only .screen-scroll areas scroll. */
+.app-root {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+  overflow: clip;
+  background: var(--bg);
+  isolation: isolate;
+}
+@media (min-width: 421px) {
+  .app-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--frame);
+    padding: 24px;
+  }
+  .app-root {
+    width: 380px;
+    height: min(780px, calc(100dvh - 48px));
+    border-radius: var(--radius-phone);
+    box-shadow: var(--shadow-chassis);
+  }
+}
+
+/* A screen fills the chassis and scrolls on its own. */
+.screen-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.screen-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Amounts: Bricolage Grotesque, tabular figures, tight tracking. */
+@utility num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keep fields white while typing and when the browser autofills (no blue wash). */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg) inset;
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  transition: background-color 9999s ease-out 0s;
+}
