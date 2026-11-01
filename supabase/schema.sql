@@ -43,7 +43,12 @@ returns trigger
 language plpgsql
 as $$
 begin
-  new.updated_at := now();
+  -- Keep the client's value (last-write-wins sync); stamp server time only if unchanged.
+  if tg_op = 'INSERT' then
+    new.updated_at := now();
+  elsif new.updated_at is not distinct from old.updated_at then
+    new.updated_at := now();
+  end if;
   return new;
 end;
 $$;
@@ -181,7 +186,7 @@ create table if not exists public.payment_details (
   ifsc                  text check (ifsc is null or ifsc ~ '^[A-Z]{4}0[A-Z0-9]{6}$'),
   bank_name             text,
   branch                text,
-  upi_id                text check (upi_id is null or upi_id ~ '^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9.-]{1,63}$'),
+  upi_id                text check (upi_id is null or upi_id ~ '^[A-Za-z0-9._-]{2,100}@[A-Za-z][A-Za-z0-9.-]{1,63}$'),
   static_qr_path        text,  -- optional uploaded QR image in 'creator-assets'
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now()
@@ -241,6 +246,7 @@ create table if not exists public.line_item_presets (
 );
 
 create index if not exists idx_presets_user on public.line_item_presets (user_id, sort_order) where deleted_at is null;
+create index if not exists idx_presets_user_updated on public.line_item_presets (user_id, updated_at);
 
 drop trigger if exists trg_presets_updated_at on public.line_item_presets;
 create trigger trg_presets_updated_at
@@ -313,8 +319,6 @@ create table if not exists public.invoices (
   deleted_at            timestamptz,
 
   constraint invoice_paid_has_date check (status <> 'paid' or paid_date is not null),
-  constraint invoice_agency_has_brand check (not via_agency or end_brand_name is not null),
-  constraint invoice_custom_terms check (payment_terms <> 'custom' or due_date is not null),
   constraint invoice_tax_mode_consistent check (
     (gst_mode = 'none'  and cgst_amount = 0 and sgst_amount = 0 and igst_amount = 0)
     or (gst_mode = 'intra' and igst_amount = 0)
@@ -347,9 +351,9 @@ create table if not exists public.invoice_items (
   user_id           uuid not null default auth.uid() references auth.users(id) on delete cascade,
   position          integer not null default 0,
   preset_id         uuid references public.line_item_presets(id) on delete set null,
-  description       text not null check (char_length(description) between 1 and 500),
+  description       text not null default '' check (char_length(description) <= 500),
   unit_label        text,
-  quantity          numeric(10,2) not null default 1 check (quantity > 0),
+  quantity          numeric(10,2) not null default 1 check (quantity >= 0),
   rate              numeric(14,2) not null default 0 check (rate >= 0),
   amount            numeric(14,2) generated always as (round(quantity * rate, 2)) stored,
   created_at        timestamptz not null default now(),
@@ -359,6 +363,7 @@ create table if not exists public.invoice_items (
 
 create index if not exists idx_items_invoice on public.invoice_items (invoice_id, position) where deleted_at is null;
 create index if not exists idx_items_user_updated on public.invoice_items (user_id, updated_at);
+create index if not exists idx_items_user on public.invoice_items (user_id);
 
 drop trigger if exists trg_items_updated_at on public.invoice_items;
 create trigger trg_items_updated_at
@@ -566,6 +571,7 @@ create policy "assets delete own" on storage.objects for delete to authenticated
   using (bucket_id = 'creator-assets' and (storage.foldername(name))[1] = auth.uid()::text);
 
 -- =============================================================================
--- Done. Next: copy the project URL and anon key into .env.local
--- (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY).
+-- Done. Next: turn on Authentication > Sign In / Providers > "Allow anonymous
+-- sign-ins" (testers need no login), then put the project URL and publishable key
+-- in .env.local (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY).
 -- =============================================================================

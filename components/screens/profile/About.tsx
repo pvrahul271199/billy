@@ -5,6 +5,7 @@ import { Button, Card, ListGroup, ListRow, useToast } from "@/components/ui";
 import { PushedScreen } from "@/components/screens/Screen";
 import { promptInstall, useInstallState } from "@/lib/pwa";
 import { useNav } from "@/lib/nav";
+import { useSyncInfo } from "@/lib/sync-engine";
 
 const VERSION = "1.0.0";
 
@@ -12,6 +13,7 @@ export function AboutScreen() {
   const state = useInstallState();
   const toast = useToast();
   const nav = useNav();
+  const sync = useSyncInfo();
 
   return (
     <PushedScreen title="App info">
@@ -20,9 +22,14 @@ export function AboutScreen() {
           <p className="text-[17px] font-medium">Billy</p>
           <p className="mt-1 text-sm text-soft">Invoices for Instagram creators. Version {VERSION}</p>
           <p className="mt-3 text-sm leading-relaxed text-soft">
-            Works offline. Everything you enter is stored only on this device. Billy is a billing tool, not tax advice:
+            Works offline. Everything you enter is saved on this device first, then backed up to the cloud when you are online. Billy is a billing tool, not tax advice:
             confirm GST and TDS treatment with your CA.
           </p>
+        </Card>
+
+        <Card>
+          <p className="text-[15px] font-medium">Cloud backup</p>
+          <p className="mt-1 text-sm leading-relaxed text-soft">{sync.message}</p>
         </Card>
 
         <section aria-labelledby="install-title" className="flex flex-col gap-3">

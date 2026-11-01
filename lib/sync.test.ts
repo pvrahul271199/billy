@@ -90,3 +90,27 @@ describe("newer", () => {
     expect(newer(undefined, a)).toBe(a);
   });
 });
+
+import { paymentFromRow, paymentToRow, presetFromRow, presetToRow, profileFromRow, profileToRow } from "./sync";
+import { defaultPayment, defaultProfile } from "@/db/schema";
+
+describe("profile, payment and preset mapping", () => {
+  it("round-trips a profile", () => {
+    const p = { ...defaultProfile(), fullName: "Priya", instagram: "priya.creates", gstRegistered: false, defaultTdsRate: 10, updatedAt: "2026-11-01T00:00:00.000Z" };
+    const row = profileToRow(p, "u1");
+    expect(row.id).toBe("u1");
+    expect(row.pan).toBeNull();
+    const back = profileFromRow(row, { photo: null, logo: null, signature: null });
+    expect(back).toMatchObject({ fullName: "Priya", instagram: "priya.creates", defaultTdsRate: 10, id: "me" });
+  });
+  it("round-trips payment details", () => {
+    const p = { ...defaultPayment(), upiId: "priya@okaxis", updatedAt: "2026-11-01T00:00:00.000Z" };
+    const back = paymentFromRow(paymentToRow(p, "u1"), null);
+    expect(back.upiId).toBe("priya@okaxis");
+    expect(back.accountNumber).toBe("");
+  });
+  it("round-trips a preset with its rate in paise", () => {
+    const p = { id: "x", label: "Reel", description: "Instagram Reel", unitLabel: "Reel", defaultRate: 2500000, sortOrder: 1, createdAt: "t", updatedAt: "t", deletedAt: null };
+    expect(presetFromRow(presetToRow(p, "u1"))).toEqual(p);
+  });
+});

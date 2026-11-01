@@ -49,7 +49,7 @@ PWA: `app/manifest.ts` (standalone, portrait), icons in `public/icons`, `scripts
 ```
 app/                 layout (fonts, metadata), page (AppShell), manifest.ts, design/, globals.css
 components/AppShell.tsx
-components/screens/  InvoiceTab, HistoryTab, ProfileTab, EditorScreen, PreviewScreen, OnboardingScreen (welcome → optional DemoTour → 3 setup steps), DemoTour (5-slide walkthrough ending in a sample invoice), Screen (PushedScreen/TabScreen/Splash), profile/*
+components/screens/  InvoiceTab, HistoryTab, ProfileTab, EditorScreen, PreviewScreen, OnboardingScreen (welcome → optional DemoTour → 3 setup steps), DemoTour (5-step walkthrough with a mock of each real screen, a "Fill demo values" button, and a sample invoice), Screen (PushedScreen/TabScreen/Splash), profile/*
 components/ui/       design-system primitives (Button, AmountField, Keypad, Stepper, BottomSheet, Overlay, TabBar, TopBar…)
 components/invoice/  form parts, InvoiceSheet (HTML preview), InvoicePdf (PDF), InvoiceActions, InvoiceRow
 components/profile/  shared settings forms (used by onboarding and Profile)
@@ -116,9 +116,12 @@ Sentence case. Buttons verb-first, 1–3 words. No exclamation marks, no "please
 
 `components/profile/forms.tsx` forms copy and submit ONLY their own fields. Never pass a whole `Profile` into form state and save it back: a stale snapshot would overwrite other settings (this bug happened once during onboarding).
 
-## Supabase (phase 6, not wired yet)
+## Supabase cloud sync (live)
 
-- Env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` (see `.env.example`). Anon key only.
-- Run `supabase/schema.sql` once in the Supabase SQL editor.
-- `lib/sync.ts` has the tested Dexie ↔ row mapping (camelCase/nested/paise/embedded items ↔ snake_case/flat/rupees/`invoice_items`, blanks → NULL so schema checks pass) and `startBackgroundSync()`, a no-op until configured. Sync must run in the background and never block the UI; last-write-wins on `updated_at`; soft deletes via `deleted_at`; client-generated UUIDs.
-- Images are data URLs locally; upload to the private `creator-assets` bucket under `<user_id>/…` and store paths in `*_path` columns.
+- Env in `.env.local` (see `.env.example`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the old `..._ANON_KEY` name also works). Publishable key only, never the service key.
+- Setup once in Supabase: run `supabase/schema.sql` (new project) or `supabase/migrations/001_sync_testing.sql` (existing project), and turn on Authentication > Sign In / Providers > Allow anonymous sign-ins.
+- **No login for now.** Each browser signs in anonymously, so each tester gets their own `auth.uid()`. Every table has `user_id` and RLS (`user_id = auth.uid()`); every index leads with `user_id`, so it scales per user. When real login arrives, link the anonymous user to an email (`updateUser`) so data is kept. Clearing browser data loses the anonymous identity.
+- `lib/sync.ts`: tested pure Dexie ↔ row mapping (camelCase/nested/paise/embedded items ↔ snake_case/flat/rupees/`invoice_items`, blanks → NULL).
+- `lib/sync-engine.ts`: started from `components/PwaInit.tsx`. Dexie table hooks schedule a push ~0.4s after every write (save, mark sent/paid, delete, import), so each save reaches the cloud at once. Order is push then pull; last-write-wins on `updated_at` (the DB trigger keeps the client's value); soft deletes via `deleted_at`; removed line items are deleted remotely; failed rows are remembered and retried; also runs on reconnect and when the app returns to the foreground. Never blocks the UI. Status shows in Profile > App info.
+- Images are data URLs locally and upload to the private `creator-assets` bucket under `<user_id>/…` (`*_path` columns). Over 2 MB or non-PNG/JPEG/WebP stays local only.
+- Add a new synced table: schema + index on `(user_id, updated_at)`, row mapping in `lib/sync.ts`, push/pull in `lib/sync-engine.ts`, hook in `startBackgroundSync`.

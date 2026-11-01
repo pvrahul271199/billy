@@ -1,0 +1,91 @@
+import { describe, expect, it } from "vitest";
+import { createClient } from "@supabase/supabase-js";
+import { invoiceFromRows, invoiceToRows, partyToRow, presetToRow, profileToRow, paymentToRow } from "./sync";
+import { newParty } from "@/db/actions";
+import { defaultPayment, defaultProfile } from "@/db/schema";
+import type { Invoice } from "@/types";
+
+const URL = "https://cfelbxdghilunqecxqri.supabase.co";
+const KEY = "sb_publishable_Fe99GRg4uNTUD7raE14oUw_9ItETKZt";
+const mk = () => createClient(URL, KEY, { auth: { persistSession: false } });
+
+describe("live supabase", () => {
+  it("syncs, round-trips and isolates users", async () => {
+    const a = mk(), b = mk();
+    const ua = (await a.auth.signInAnonymously()).data.user!;
+    const ub = (await b.auth.signInAnonymously()).data.user!;
+    expect(ua.id).not.toBe(ub.id);
+
+    const ts = "2026-11-01T10:00:00.000Z";
+    // profile (row auto-created by trigger) + payment
+    let r = await a.from("profiles").upsert(profileToRow({ ...defaultProfile(), fullName: "Test A", onboardedAt: ts, updatedAt: ts }, ua.id), { onConflict: "id" });
+    expect(r.error?.message).toBeUndefined();
+    r = await a.from("payment_details").upsert(paymentToRow({ ...defaultPayment(), upiId: "a@okaxis", updatedAt: ts }, ua.id), { onConflict: "user_id" });
+    expect(r.error?.message).toBeUndefined();
+
+    const party = { ...newParty(), name: "Brand X", updatedAt: ts };
+    r = await a.from("parties").upsert([partyToRow(party, ua.id)]);
+    expect(r.error?.message).toBeUndefined();
+    const preset = { id: crypto.randomUUID(), label: "Reel", description: "", unitLabel: "", defaultRate: 100000, sortOrder: 0, createdAt: ts, updatedAt: ts, deletedAt: null };
+    r = await a.from("line_item_presets").upsert([presetToRow(preset, ua.id)]);
+    expect(r.error?.message).toBeUndefined();
+
+    // half-filled draft: blank description, via agency with no end brand
+    const inv: Invoice = {
+      id: crypto.randomUUID(), number: "BLY/26-27/001", financialYear: "26-27", status: "draft", invoiceDate: "2026-11-01",
+      paymentTerms: "custom", dueDate: "", deliveryDate: "", billToId: party.id, viaAgency: true, endBrandName: "", campaignName: "",
+      items: [{ id: crypto.randomUUID(), description: "", unitLabel: "", quantity: 0, rate: 0 }, { id: crypto.randomUUID(), description: "Reel", unitLabel: "Reel", quantity: 2, rate: 1250000 }],
+      gstMode: "intra", gstRate: 18, sacCode: "", showTds: true, tdsRate: 10, notes: "", includeBank: true, includeUpiQr: true, includeSignature: false,
+      fromSnapshot: null, billToSnapshot: null, paymentSnapshot: null, sentAt: null, paidDate: null, createdAt: ts, updatedAt: ts, deletedAt: null,
+    };
+    const m = invoiceToRows(inv, ua.id);
+    r = await a.from("invoices").upsert([m.invoice]);
+    expect(r.error?.message).toBeUndefined();
+    r = await a.from("invoice_items").upsert(m.items);
+    expect(r.error?.message).toBeUndefined();
+
+    // read back with embedded items; client updated_at must be preserved
+    const got = await a.from("invoices").select("*, invoice_items(*)").eq("id", inv.id).single();
+    expect(got.error?.message).toBeUndefined();
+    expect(new Date(got.data!.updated_at).toISOString()).toBe(ts);
+    const back = invoiceFromRows(got.data!, got.data!.invoice_items);
+    expect(back.items).toHaveLength(2);
+    expect(back.items.find((i) => i.description === "Reel")!.rate).toBe(1250000);
+
+    // update: newer client timestamp kept
+    const ts2 = "2026-11-01T11:00:00.000Z";
+    await a.from("invoices").upsert([{ ...m.invoice, notes: "edited", updated_at: ts2 }]);
+    const g2 = await a.from("invoices").select("updated_at,notes").eq("id", inv.id).single();
+    expect(new Date(g2.data!.updated_at).toISOString()).toBe(ts2);
+
+    // remove an item remotely like the engine does
+    const keep = m.items[1]!.id as string;
+    const d = await a.from("invoice_items").delete().eq("invoice_id", inv.id).not("id", "in", `(${keep})`);
+    expect(d.error?.message).toBeUndefined();
+    expect((await a.from("invoice_items").select("id").eq("invoice_id", inv.id)).data).toHaveLength(1);
+
+    // isolation: B sees nothing of A
+    for (const t of ["invoices", "parties", "invoice_items", "line_item_presets", "payment_details"]) {
+      expect((await b.from(t).select("*")).data, t).toHaveLength(0);
+    }
+    expect((await b.from("profiles").select("id")).data!.map((p) => p.id)).toEqual([ub.id]);
+    // B cannot write rows as A
+    const bad = await b.from("parties").upsert([partyToRow({ ...newParty(), name: "Evil" }, ua.id)]);
+    expect(bad.error).not.toBeNull();
+
+    // storage
+    const png = new Blob([Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="), (c) => c.charCodeAt(0))], { type: "image/png" });
+    const up = await a.storage.from("creator-assets").upload(`${ua.id}/logo.png`, png, { upsert: true, contentType: "image/png" });
+    expect(up.error?.message).toBeUndefined();
+    const dl = await a.storage.from("creator-assets").download(`${ua.id}/logo.png`);
+    expect(dl.error).toBeNull();
+    const bup = await b.storage.from("creator-assets").upload(`${ua.id}/x.png`, png, { contentType: "image/png" });
+    expect(bup.error).not.toBeNull();
+
+    // cleanup: deleting the auth user is not possible from client; remove the rows we made
+    await a.from("invoices").delete().eq("id", inv.id);
+    await a.from("parties").delete().eq("id", party.id);
+    await a.from("line_item_presets").delete().eq("id", preset.id);
+    await a.storage.from("creator-assets").remove([`${ua.id}/logo.png`]);
+  }, 60000);
+});

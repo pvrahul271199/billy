@@ -11,13 +11,19 @@
  * money in rupees). Blank strings become NULL so the schema's format checks pass.
  */
 import type { Address, Invoice, LineItem, Party, PaymentDetails, Preset, Profile } from "@/types";
+import { amountInWords } from "./amount-in-words";
 import { computeTotals } from "./tax";
 
 type Row = Record<string, unknown>;
 
-/** True once the Supabase URL and anon key are set in .env.local. */
+/** Publishable (anon) key. Either env name works. */
+export function supabaseKey(): string | undefined {
+  return process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+}
+
+/** True once the Supabase URL and publishable key are set in .env.local. */
 export function isSyncConfigured(): boolean {
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && supabaseKey());
 }
 
 const blank = (v: string | null | undefined): string | null => (v && v.trim() ? v.trim() : null);
@@ -57,6 +63,56 @@ export function profileToRow(p: Profile, userId: string): Row {
     default_notes: blank(p.defaultNotes),
     onboarded_at: p.onboardedAt,
     updated_at: p.updatedAt,
+  };
+}
+
+/** Remote row → profile. Images are filled in separately from storage. */
+export function profileFromRow(r: Row, images: Pick<Profile, "photo" | "logo" | "signature">): Profile {
+  return {
+    id: "me",
+    fullName: str(r.full_name),
+    instagram: str(r.instagram_username),
+    email: str(r.email),
+    phone: str(r.phone),
+    pan: str(r.pan),
+    address: addressFromRow(r),
+    ...images,
+    gstRegistered: !!r.gst_registered,
+    gstin: str(r.gstin),
+    defaultSac: str(r.default_sac),
+    defaultTdsRate: r.default_tds_rate === null || r.default_tds_rate === undefined ? null : Number(r.default_tds_rate),
+    invoicePrefix: str(r.invoice_prefix) || "BLY",
+    defaultNotes: str(r.default_notes),
+    onboardedAt: (r.onboarded_at as string | null) ?? null,
+    updatedAt: str(r.updated_at),
+  };
+}
+
+export function paymentFromRow(r: Row, staticQr: string | null): PaymentDetails {
+  return {
+    id: "me",
+    accountHolder: str(r.account_holder_name),
+    accountNumber: str(r.account_number),
+    ifsc: str(r.ifsc),
+    bankName: str(r.bank_name),
+    branch: str(r.branch),
+    upiId: str(r.upi_id),
+    staticQr,
+    updatedAt: str(r.updated_at),
+  };
+}
+
+export function presetFromRow(r: Row): Preset {
+  return {
+    id: str(r.id),
+    label: str(r.label),
+    description: str(r.description),
+    unitLabel: str(r.unit_label),
+    defaultRate: r.default_rate === null || r.default_rate === undefined ? null : paise(r.default_rate),
+    sortOrder: Number(r.sort_order ?? 0),
+    createdAt: str(r.created_at),
+    updatedAt: str(r.updated_at),
+    deletedAt: (r.deleted_at as string | null) ?? null,
   };
 }
 
@@ -151,6 +207,7 @@ export function invoiceToRows(inv: Invoice, userId: string): { invoice: Row; ite
       sgst_amount: rupees(t.sgst),
       igst_amount: rupees(t.igst),
       total: rupees(t.total),
+      amount_in_words: t.total > 0 ? amountInWords(t.total) : null,
       show_tds: inv.showTds,
       tds_rate: inv.tdsRate,
       tds_amount: inv.showTds ? rupees(t.tds) : null,
@@ -223,15 +280,4 @@ export function invoiceFromRows(r: Row, itemRows: Row[]): Invoice {
 export function newer<T extends { updatedAt: string }>(local: T | undefined, remote: T): T {
   if (!local) return remote;
   return remote.updatedAt > local.updatedAt ? remote : local;
-}
-
-/**
- * Starts background sync. A no-op until Supabase is configured; the app
- * works fully offline either way. Wiring the Supabase client (auth, push,
- * pull) is phase 6 and must never block the UI.
- */
-export function startBackgroundSync(): () => void {
-  if (!isSyncConfigured()) return () => {};
-  // Phase 6: sign in, then push dirty rows (updated_at > lastSyncedAt) and pull remote changes.
-  return () => {};
 }
