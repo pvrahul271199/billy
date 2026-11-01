@@ -404,7 +404,7 @@ export function TaxForm({
       <Card className="flex gap-3 text-[13px] leading-relaxed text-soft">
         <Info size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-ink" />
         <p>
-          Brands may deduct TDS before paying you. Billy shows it as a note on the invoice and never reduces your total.
+          Brands may deduct TDS before paying you. It shows as a note on the invoice and never reduces your total.
           Confirm the right rate with your CA.
         </p>
       </Card>

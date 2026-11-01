@@ -13,7 +13,7 @@ import { Splash } from "./Screen";
 
 const STEPS = [
   { title: "Your details", intro: "This goes on every invoice you send. Only your name is needed now." },
-  { title: "Tax", intro: "Set this once and Billy works out GST on each invoice." },
+  { title: "Tax", intro: "Set this once and GST is worked out on each invoice." },
   { title: "Payment", intro: "Where brands pay you. Invoices get a UPI QR for the exact amount." },
 ] as const;
 
@@ -128,8 +128,7 @@ function Welcome({ onStart, onDemo }: { onStart: () => void; onDemo: () => void 
   return (
     <div className="flex h-full flex-col bg-bg">
       <div className="screen-scroll min-h-0 flex-1 px-6 pt-[calc(var(--safe-top)+48px)]">
-        <p className="text-[13px] font-semibold text-soft">Billy</p>
-        <h1 className="mt-2 text-[34px] leading-[1.1] font-semibold tracking-[-0.02em]">Invoices for creators, made simple</h1>
+        <h1 className="text-[34px] leading-[1.1] font-semibold tracking-[-0.02em]">Invoices for creators, made simple</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-soft">
           Bill brands for Reels, posts and Stories in under a minute. Works offline, and your data stays on your phone.
         </p>

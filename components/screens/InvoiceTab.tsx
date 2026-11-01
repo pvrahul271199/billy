@@ -31,7 +31,7 @@ export function InvoiceTab() {
   return (
     <TabScreen
       title="Pending"
-      subtitle={firstName ? `Hi ${firstName}` : "Billy"}
+      subtitle={firstName ? `Hi ${firstName}` : undefined}
       footer={
         <Button icon={Plus} fullWidth size="lg" onClick={() => nav.push({ name: "editor" })}>
           New invoice

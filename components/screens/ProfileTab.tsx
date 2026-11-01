@@ -28,7 +28,7 @@ export function ProfileTab() {
           onClick={() => nav.push({ name: "creator" })}
           className="flex items-center gap-4 rounded-note bg-tint p-4 text-left transition-colors hover:bg-line"
         >
-          <Avatar name={profile.fullName || "Billy"} src={profile.photo} size="lg" />
+          <Avatar name={profile.fullName || "You"} src={profile.photo} size="lg" />
           <span className="min-w-0">
             <span className="block truncate text-[17px] font-semibold">{profile.fullName || "Add your name"}</span>
             <span className="block truncate text-[13px] text-soft">{profile.instagram ? formatInstagram(profile.instagram) : "Creator details"}</span>

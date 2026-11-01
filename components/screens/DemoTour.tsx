@@ -20,7 +20,7 @@ interface Slide {
 
 const SLIDES: Slide[] = [
   { icon: ListPlus, title: "Add the work in seconds", text: "Pick a brand, tap a preset like Reel or Story, and enter the amount on the in-app keypad." },
-  { icon: Receipt, title: "GST and TDS, worked out", text: "Billy picks CGST + SGST or IGST from the brand's state and shows the total in words." },
+  { icon: Receipt, title: "GST and TDS, worked out", text: "CGST + SGST or IGST is picked from the brand's state and shows the total in words." },
   { icon: QrCode, title: "Get paid faster", text: "Every invoice carries a UPI QR for the exact amount, plus your bank details." },
   { icon: ChartBar, title: "Know who owes you", text: "History shows what is pending, overdue or paid. Mark paid in one tap." },
   { icon: FilePdf, title: "A clean PDF, ready to share", text: "This is what a brand receives. Plain black on white, easy to print or forward." },

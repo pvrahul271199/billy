@@ -93,6 +93,8 @@ Calm, clarity, zero financial anxiety. Swiss typography, hardware-grade surfaces
 
 ## Copy rules
 
+The name "Billy" appears only where it is needed: app title and manifest, App info, install and backup messages. Never as a decorative label on a screen, and never on the invoice (no "Generated with Billy" footer).
+
 Sentence case. Buttons verb-first, 1–3 words. No exclamation marks, no "please", no "successfully". Errors say what happened and what to do in one sentence ("IFSC needs 11 characters"). Placeholders are real examples.
 
 ## Domain rules (India)

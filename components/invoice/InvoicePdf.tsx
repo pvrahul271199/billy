@@ -219,7 +219,7 @@ export function InvoicePdf({ view, qr }: { view: InvoiceView; qr: string | null 
         ) : null}
 
         <View style={s.footer} fixed>
-          <Text>Generated with Billy</Text>
+          <Text />
           <Text render={({ pageNumber, totalPages }) => (totalPages > 1 ? `Page ${pageNumber} of ${totalPages}` : "")} />
         </View>
       </Page>

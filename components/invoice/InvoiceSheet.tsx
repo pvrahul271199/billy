@@ -228,7 +228,6 @@ export function InvoiceSheet({ view }: { view: InvoiceView }) {
           </div>
         ) : null}
 
-        <p className="absolute right-10 bottom-6 left-10 text-[7.5px] text-print-soft">Generated with Billy</p>
       </div>
     </div>
   );
