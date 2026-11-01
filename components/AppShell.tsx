@@ -12,8 +12,13 @@ import { ProfileTab } from "./screens/ProfileTab";
 import { EditorScreen } from "./screens/EditorScreen";
 import { PreviewScreen } from "./screens/PreviewScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
+import { SignInScreen } from "./screens/SignInScreen";
+import { hasSkippedSignIn, useAuth } from "@/lib/auth";
+import { isSyncConfigured } from "@/lib/sync";
+import { useSyncInfo } from "@/lib/sync-engine";
 import {
   AboutScreen,
+  AccountScreen,
   BackupScreen,
   BankScreen,
   BrandEditScreen,
@@ -54,6 +59,8 @@ function renderRoute(route: Route): ReactNode {
       return <BackupScreen />;
     case "about":
       return <AboutScreen />;
+    case "account":
+      return <AccountScreen />;
   }
 }
 
@@ -110,8 +117,16 @@ function Screens() {
 
 function Gate() {
   const profile = useProfile();
-  if (!profile) return <Splash />;
-  if (!profile.onboardedAt) return <OnboardingScreen />;
+  const auth = useAuth();
+  const sync = useSyncInfo();
+  if (!profile || auth.status === "loading") return <Splash />;
+  if (!profile.onboardedAt) {
+    // First visit on this device: ask for sign-in before setup.
+    if (isSyncConfigured() && auth.status === "signedOut" && !hasSkippedSignIn()) return <SignInScreen />;
+    // Just signed in: wait for the first sync so an existing account skips setup.
+    if (auth.status === "signedIn" && !sync.lastSyncedAt && sync.status !== "error" && sync.status !== "offline") return <Splash />;
+    return <OnboardingScreen />;
+  }
   return <Screens />;
 }
 

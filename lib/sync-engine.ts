@@ -13,7 +13,6 @@
  *  - Failures never block the app. Failed rows are remembered and retried.
  */
 import { useSyncExternalStore } from "react";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { db, getKV, setKV } from "@/db";
 import type { Invoice, Party, PaymentDetails, Preset, Profile } from "@/types";
 import {
@@ -29,8 +28,9 @@ import {
   presetToRow,
   profileFromRow,
   profileToRow,
-  supabaseKey,
 } from "./sync";
+import { supabase } from "./supabase";
+import { hasSkippedSignIn } from "./auth";
 
 type Row = Record<string, unknown>;
 type TableKey = "profile" | "payment" | "parties" | "presets" | "invoices";
@@ -41,6 +41,8 @@ interface SyncState {
   failed: Partial<Record<TableKey, string[]>>;
   /** Hash of the image last uploaded per field, so unchanged images aren't re-sent. */
   uploaded: Record<string, string>;
+  /** Cloud user these watermarks belong to. */
+  uid?: string;
 }
 
 const STATE_KEY = "syncState";
@@ -75,18 +77,13 @@ export function useSyncInfo(): SyncInfo {
   );
 }
 
-let client: SupabaseClient | null = null;
-function supabase(): SupabaseClient {
-  client ??= createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, supabaseKey()!, {
-    auth: { persistSession: true, autoRefreshToken: true, storageKey: "billy-auth" },
-  });
-  return client;
-}
+class NeedsSignIn extends Error {}
 
 async function userId(): Promise<string> {
   const sb = supabase();
   const { data } = await sb.auth.getSession();
   if (data.session) return data.session.user.id;
+  if (!hasSkippedSignIn()) throw new NeedsSignIn();
   const { data: anon, error } = await sb.auth.signInAnonymously();
   if (error || !anon.user) {
     throw new Error(
@@ -314,6 +311,14 @@ let running = false;
 let again = false;
 let applying = false;
 
+/** Run a sync now and wait for it. Used after sign-in and before sign-out. */
+export async function syncNow(): Promise<SyncInfo> {
+  if (!isSyncConfigured()) return info;
+  while (running) await new Promise((r) => setTimeout(r, 100));
+  await cycle();
+  return info;
+}
+
 async function cycle(): Promise<void> {
   if (running) {
     again = true;
@@ -329,7 +334,12 @@ async function cycle(): Promise<void> {
       }
       set({ status: "syncing", message: "Syncing…" });
       const uid = await userId();
-      const state = await loadState();
+      let state = await loadState();
+      if (state.uid !== uid) {
+        // A different account on this device: everything here must be pushed to it afresh.
+        state = { pushedAt: {}, pulledAt: {}, failed: {}, uploaded: {}, uid };
+      }
+      state.uid = uid;
       applying = true; // remote writes must not schedule another push
       try {
         await push(uid, state);
@@ -346,6 +356,10 @@ async function cycle(): Promise<void> {
       );
     } while (again);
   } catch (e) {
+    if (e instanceof NeedsSignIn) {
+      set({ status: "off", message: "Sign in to back up your data" });
+      return;
+    }
     const msg = e instanceof Error ? e.message : "Sync failed";
     console.warn("[sync]", msg);
     set({ status: navigator.onLine ? "error" : "offline", message: msg });
@@ -385,8 +399,11 @@ export function startBackgroundSync(): () => void {
     if (info.status === "error" || info.status === "offline") schedule(0);
   }, RETRY_MS);
 
+  const { data: authSub } = supabase().auth.onAuthStateChange(() => schedule(0));
+
   schedule(0);
   return () => {
+    authSub.subscription.unsubscribe();
     clearTimeout(timer);
     clearInterval(retry);
     window.removeEventListener("online", online);

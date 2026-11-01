@@ -1,3 +1,4 @@
+export { AccountScreen } from "./Account";
 export { AboutScreen } from "./About";
 export { BackupScreen } from "./Backup";
 export { BankScreen } from "./Bank";

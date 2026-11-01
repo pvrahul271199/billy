@@ -1,14 +1,17 @@
 "use client";
 
-import { Bank, Buildings, DownloadSimple, FileText, Hash, Image as ImageIcon, Info, ListBullets, Percent, User } from "@phosphor-icons/react";
+import { Bank, Buildings, DownloadSimple, FileText, Hash, Image as ImageIcon, Info, ListBullets, Percent, User, UserCircle } from "@phosphor-icons/react";
 import { Avatar, ListGroup, ListRow } from "@/components/ui";
 import { useParties, usePayment, usePresets, useProfile } from "@/db/queries";
 import { formatInstagram } from "@/lib/format";
 import { useNav } from "@/lib/nav";
+import { useAuth } from "@/lib/auth";
+import { isSyncConfigured } from "@/lib/sync";
 import { Splash, TabScreen } from "./Screen";
 
 export function ProfileTab() {
   const nav = useNav();
+  const auth = useAuth();
   const profile = useProfile();
   const payment = usePayment();
   const parties = useParties();
@@ -31,6 +34,17 @@ export function ProfileTab() {
             <span className="block truncate text-[13px] text-soft">{profile.instagram ? formatInstagram(profile.instagram) : "Creator details"}</span>
           </span>
         </button>
+
+        {isSyncConfigured() ? (
+          <ListGroup label="Account">
+            <ListRow
+              icon={UserCircle}
+              title={auth.status === "signedIn" ? auth.email : "Sign in"}
+              description={auth.status === "signedIn" ? "Your invoices are backed up" : "Keep your invoices safe on any phone"}
+              onClick={() => nav.push({ name: "account" })}
+            />
+          </ListGroup>
+        ) : null}
 
         <ListGroup label="You">
           <ListRow icon={User} title="Creator details" description={profile.email || "Name, contact, PAN, address"} onClick={() => nav.push({ name: "creator" })} />

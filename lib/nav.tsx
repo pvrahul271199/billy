@@ -18,7 +18,8 @@ export type Route =
   | { name: "notes" }
   | { name: "prefix" }
   | { name: "backup" }
-  | { name: "about" };
+  | { name: "about" }
+  | { name: "account" };
 
 export interface StackEntry {
   key: number;
