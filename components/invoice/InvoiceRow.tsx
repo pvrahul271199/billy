@@ -27,7 +27,7 @@ export function InvoiceRow({
       <button
         type="button"
         onClick={() => nav.push({ name: "preview", id: invoice.id })}
-        className="flex min-w-0 flex-1 gap-3 py-3.5 pl-4 text-left transition-colors duration-150 hover:bg-tint active:bg-line focus-visible:-outline-offset-2"
+        className="flex min-w-0 flex-1 gap-3 py-3.5 pl-4 text-left transition-colors duration-150 active:opacity-60 focus-visible:-outline-offset-2"
       >
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-semibold text-ink">{billTo}</span>

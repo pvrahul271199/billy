@@ -308,7 +308,7 @@ export function EditorScreen({ id }: { id?: string }) {
             <p className="num truncate text-[24px] leading-tight text-ink">{formatINR(totals.total)}</p>
           </div>
           <Button icon={Eye} size="lg" loading={saving === "preview"} onClick={() => void persist("preview")}>
-            Preview
+            Save and preview
           </Button>
         </div>
       }
@@ -391,7 +391,7 @@ export function EditorScreen({ id }: { id?: string }) {
               aria-haspopup="dialog"
               onClick={() => setPickerOpen(true)}
               className={cn(
-                "flex min-h-14 w-full items-center gap-3 rounded-key border bg-white px-4 py-2.5 text-left transition-colors duration-150 hover:bg-tint",
+                "flex min-h-14 w-full items-center gap-3 rounded-key border bg-white px-4 py-2.5 text-left transition-opacity duration-150 active:opacity-60",
                 errors.billTo ? "border-warm" : "border-line",
               )}
             >

@@ -91,7 +91,7 @@ export function BrandPicker({ open, onClose, parties, selectedId, preferType, on
                         close();
                       }}
                       className={cn(
-                        "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-tint active:bg-line",
+                        "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 active:opacity-60",
                         selected && "bg-tint",
                       )}
                     >

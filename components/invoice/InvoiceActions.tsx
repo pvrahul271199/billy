@@ -218,7 +218,7 @@ function SheetAction({
         onClick={onClick}
         disabled={loading}
         aria-busy={loading || undefined}
-        className="flex min-h-13 w-full items-center gap-3 px-4 text-left text-[15px] font-medium transition-colors duration-150 hover:bg-tint active:bg-line disabled:text-faint"
+        className="flex min-h-13 w-full items-center gap-3 px-4 text-left text-[15px] font-medium transition-colors duration-150 active:opacity-60 disabled:text-faint"
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-tint">
           <IconCmp size={20} aria-hidden="true" className="text-ink" />

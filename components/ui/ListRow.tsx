@@ -15,9 +15,9 @@ export interface ListRowProps {
 }
 
 const rowClass =
-  "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 " +
-  "hover:bg-tint active:bg-line focus-visible:-outline-offset-2 " +
-  "disabled:cursor-not-allowed disabled:hover:bg-transparent";
+  "flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-opacity duration-150 " +
+  "active:opacity-60 focus-visible:-outline-offset-2 " +
+  "disabled:cursor-not-allowed ";
 
 /** Settings-style row: icon tile, title, value, chevron. */
 export function ListRow({ title, icon: IconCmp, value, description, onClick, chevron = true, disabled }: ListRowProps) {
@@ -44,7 +44,7 @@ export function ListRow({ title, icon: IconCmp, value, description, onClick, che
       </button>
     );
   }
-  return <div className={cn(rowClass, "hover:bg-transparent active:bg-transparent")}>{inner}</div>;
+  return <div className={cn(rowClass, "active:opacity-100")}>{inner}</div>;
 }
 
 /** Hairline-bordered group of rows. */
