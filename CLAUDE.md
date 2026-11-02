@@ -4,6 +4,7 @@ Billy is a minimal invoicing PWA for Indian Instagram creators to bill brands an
 
 - Product spec: `docs/SPEC.md` (the original brief; the design and architecture sections below supersede its green palette and URL routing).
 - Database schema for cloud sync: `supabase/schema.sql`.
+- Everything under "v2 roadmap" at the end of this file is designed but **not built**. Do not assume those fields, screens or rules exist.
 
 ## Commands
 
@@ -130,3 +131,49 @@ Sentence case. Buttons verb-first, 1–3 words. No exclamation marks, no "please
 - `lib/sync-engine.ts`: started from `components/PwaInit.tsx`. Dexie table hooks schedule a push ~0.4s after every write (save, mark sent/paid, delete, import), so each save reaches the cloud at once. Order is push then pull; last-write-wins on `updated_at` (the DB trigger keeps the client's value); soft deletes via `deleted_at`; removed line items are deleted remotely; failed rows are remembered and retried; also runs on reconnect and when the app returns to the foreground. Never blocks the UI. Status shows in Profile > App info and Account. Sync waits (status off) until the user signs in or skips.
 - Images are data URLs locally and upload to the private `creator-assets` bucket under `<user_id>/…` (`*_path` columns). Over 2 MB or non-PNG/JPEG/WebP stays local only.
 - Add a new synced table: schema + index on `(user_id, updated_at)`, row mapping in `lib/sync.ts`, push/pull in `lib/sync-engine.ts`, hook in `startBackgroundSync`.
+
+## v2 roadmap (designed, not built)
+
+Build in this order, lowest risk first: v2.1 brand insights, v2.2 quotes and proforma, v2.4 rate card and deals (needs v2.2), v2.3 foreign-brand invoices. Each ships with Vitest tests for its pure logic, and any new column goes through the "add a new synced table" steps above plus a numbered migration in `supabase/migrations/`.
+
+### v2.1 Brand insights
+
+- **Per-brand defaults** on `Party`: `defaultTerms: PaymentTerms | null` and `rateOverrides: Array<{ presetId, rate }>`. Terms apply when a brand is chosen in the editor, unless the creator already changed terms by hand. When a brand is selected, a saved line item uses that brand's override rate, falling back to `Preset.defaultRate`.
+- **Insights are computed, never stored**, in a pure `lib/brand-insights.ts`: invoiced total (FY and all-time), outstanding, paid count, average days to pay, on-time rate, oldest overdue days. Days to pay = `paidDate` minus the sent date (`sentAt`, else `invoiceDate`). Paid invoices only; quotes and proformas excluded.
+- Show the average only after 2 or more paid invoices; otherwise "Not enough data yet". Flag "usually pays N days late" when the average exceeds the terms by more than 7 days. Style it `warm` with icon and word, never red.
+- **UI:** an insights card on the brand screen (`BrandEdit` grows into a brand detail that also lists its invoices); brands list rows read "Pays in about 18 days · ₹X outstanding"; the editor shows a hint under the due date once a brand is picked; pending invoices sort by days overdue.
+- **Sync:** `parties.default_terms` and `parties.rate_overrides` (jsonb). Insights need no sync.
+
+### v2.2 Quotes and proforma invoices
+
+- **Same table, new type:** `Invoice.docType: "invoice" | "quote" | "proforma"` (default `"invoice"`). This reuses the editor, preview, all five templates, the PDF, snapshots and sync.
+- **Numbering:** separate sequences with their own prefixes (`QTE/26-27/001`, `PRO/26-27/001`; `Profile.quotePrefix` and `proformaPrefix`). Quotes never use up invoice numbers, which must stay consecutive. `nextInvoiceNumber` and `usedNumbersForSequence` already work per prefix and FY; check `lib/remote-numbers.ts` also takes the prefix.
+- **Status:** quote `draft → sent → accepted | declined`, plus a computed `expired` once `validUntil` has passed (like overdue, never stored). Proforma `draft → sent → converted`. New `validUntil` field.
+- **Everything that counts money must filter `docType === "invoice"`:** totals and stats in `lib/summaries.ts` and the History tab, the overdue banner, the numbering lookups and brand insights. Add tests that quotes never leak into these.
+- **Convert to invoice in one tap:** a pure, tested `convertDraft(quote, nextNumber)` in `/lib` plus an action in `db/actions.ts`. It copies items, brand, GST, notes and template into a new invoice draft with a fresh invoice number and sets `convertedFromId`, then marks the source `accepted` (quote) or `converted` (proforma). It is idempotent: if the source was already converted, it opens the existing invoice. Preview shows "Convert to invoice" as the primary action for a sent or accepted quote.
+- **Rendering:** the title becomes "Quotation" or "Proforma Invoice", "Valid until" replaces "Due date", and quotes hide the UPI QR and payment-due wording. Both renderers read `InvoiceView`, so each template needs only label swaps and hidden blocks; change the HTML and PDF layouts together.
+- **UI:** the Invoice tab "New" gets a type choice (Invoice | Quote | Proforma); History gets a type filter. Status pills keep the palette and always show icon and word (Accepted `good`, Declined `warm`, Expired `warm`).
+- **Sync:** `invoices.doc_type`, `valid_until`, `converted_from_id`, with check constraints.
+
+### v2.3 Foreign-brand invoices
+
+Confirm the LUT and export-of-services wording and the place-of-supply rules with a CA before building. This is the only v2 feature with legal risk.
+
+- **Currency:** `Invoice.currency: "INR" | "USD" | "EUR"` (default INR). Foreign amounts are integer minor units (cents), rounded like paise. Add `formatMoney(minor, currency)` in `lib/money.ts` (`formatINR` stays for INR) and make `amountInWords` currency-aware (US Dollars and Cents, Euros and Cents).
+- **INR equivalent:** a manual `exchangeRate` (INR per 1 unit, 4 decimals) and `rateDate` per invoice; Billy never fetches rates. The INR value is computed (`total × rate`), never stored, and drives summaries, FY totals and brand insights. The editor shows an "INR equivalent" line under the total.
+- **GST for exports:** new `GstMode "export_lut"` with 0% tax and the statement "Supply meant for export under LUT without payment of IGST". It needs `Profile.lutNumber` and `lutFinancialYear`, with a warning when the LUT's FY is not current. Unregistered creators use mode `none`. `gstModeFor` gains a rule: registered creator and a bill-to party outside India gives `export_lut`. "Pay IGST and claim refund" is deferred.
+- **Foreign party:** `Party.country` (default India). Outside India, hide state, PIN and GSTIN fields and their validators and show a tax ID or VAT field.
+- **Payment:** `PaymentDetails` gains optional `swift`, `iban` and `wiseOrPaypal`. Foreign invoices hide UPI details and the UPI QR, hide TDS and force `showTds` off.
+- **Rendering:** `InvoiceView` carries formatted strings, so every template needs only an export statement line, an INR equivalent line and the new bank rows. Add one shared block in both `components/invoice/sheet/parts.tsx` and `components/invoice/pdf/parts.tsx`.
+- **Sync:** `invoices.currency`, `exchange_rate`, `rate_date`; the widened `gst_mode` check; `profiles.lut_number`, `lut_fy`; `payment_details.swift`, `iban`, `wise_or_paypal`; `parties.country`, `tax_id`.
+- **Tests:** money formatting and words per currency, `computeTotals` with zero tax in export mode, the `gstModeFor` export rule, INR equivalent rounding, sync round-trip.
+
+### v2.4 Rate card and deals
+
+Full design: `docs/v2-deals.md` (schema, state machine, flows, abuse limits, scale, phases). Read it before building any part of this.
+
+- **What it is.** The creator publishes a rate card at a public link (`/r/?h=<handle>`). A brand or agency browses it without logging in, sends an offer, and negotiates in rounds through a private link (`/d/#<token>`, token after `#`). Each offer or counter appears as a deal at the top of the Invoice tab. An accepted deal converts in one tap to a v2.2 quote (or an invoice draft) and creates or matches the Party.
+- **Data ownership.** The rate card is local-first and synced like presets. Deals are server-authoritative: Dexie holds a read-only cache, and every action goes through Postgres functions (`deal_act`, `claim_handle`) that lock the row and check `expected_round`. Offers are append-only history. `expired` is computed, never stored.
+- **Public access.** Only through the `deals-public` Edge Function. It runs with the service-role key on the server, Turnstile captcha, rate limits, input caps and a honeypot. The `anon` role has no table access. The public card never shows PAN, address, bank details or phone.
+- **No brand verification.** Brand emails are labelled "Not verified". The creator can block a sender, pause offers, archive a deal and rotate a lost brand link. Alerts are in-app only.
+- **Before phase 1.** Switch auth to OTP mode, and require an email sign-in (not anonymous) to publish a rate card.

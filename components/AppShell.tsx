@@ -127,7 +127,7 @@ function Gate() {
     // First visit on this device: ask for sign-in before setup.
     if (isSyncConfigured() && auth.status === "signedOut" && !hasSkippedSignIn()) return <SignInScreen />;
     // Just signed in: wait for the first sync so an existing account skips setup.
-    if (auth.status === "signedIn" && !sync.lastSyncedAt && sync.status !== "error" && sync.status !== "offline") return <Splash />;
+    if (auth.status === "signedIn" && !sync.lastSyncedAt && sync.status !== "error" && sync.status !== "offline") return <Splash label="Getting your invoices" />;
     return <OnboardingScreen />;
   }
   return <Screens />;

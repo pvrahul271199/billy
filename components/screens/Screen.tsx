@@ -63,7 +63,28 @@ export function TabScreen({
   );
 }
 
-/** Splash shown while IndexedDB opens (a few milliseconds). */
-export function Splash() {
-  return <div className="h-full bg-bg" role="status" aria-label="Loading" />;
+/**
+ * Loading screen. Stays blank for the first 350ms so the usual few-millisecond
+ * IndexedDB open never flashes; if the wait is longer (first sync after sign-in,
+ * slow device), a calm ring around a faint rupee fades in.
+ */
+export function Splash({ label }: { label?: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center bg-bg" role="status" aria-label={label ?? "Loading"}>
+      <div className="flex animate-splash-in flex-col items-center gap-5">
+        <div className="relative flex h-16 w-16 items-center justify-center">
+          <svg viewBox="0 0 64 64" fill="none" aria-hidden="true" className="absolute inset-0 h-full w-full">
+            <circle cx="32" cy="32" r="29" className="stroke-line" strokeWidth="2" />
+          </svg>
+          <svg viewBox="0 0 64 64" fill="none" aria-hidden="true" className="absolute inset-0 h-full w-full animate-splash-orbit">
+            <path d="M32 3a29 29 0 0 1 29 29" className="stroke-ink" strokeWidth="2.5" strokeLinecap="round" />
+          </svg>
+          <span className="num animate-splash-breathe text-[26px] leading-none text-ink2" aria-hidden="true">
+            ₹
+          </span>
+        </div>
+        {label ? <p className="text-[13px] text-soft">{label}</p> : null}
+      </div>
+    </div>
+  );
 }

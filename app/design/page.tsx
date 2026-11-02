@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { CheckCircle, DownloadSimple, MagnifyingGlass, Plus, Receipt, ShareNetwork, WarningCircle } from "@phosphor-icons/react";
 import { InvoiceSheet } from "@/components/invoice/InvoiceSheet";
 import { TemplatePicker } from "@/components/invoice/TemplatePicker";
+import { Splash } from "@/components/screens/Screen";
 import { demoInvoiceView } from "@/lib/demo-invoice";
 import { TEMPLATES } from "@/lib/invoice-templates";
 import type { InvoiceTemplateId } from "@/types";
@@ -544,6 +545,13 @@ function Showcase() {
               ))}
             </ListGroup>
           </BottomSheet>
+        </Section>
+
+        <Section id="loading" title="Loading screen" intro="Blank for the first 350ms so fast loads never flash, then a ring around a faint rupee fades in. An optional label explains longer waits such as the first sync.">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-64 overflow-hidden rounded-note border border-line"><Splash /></div>
+            <div className="h-64 overflow-hidden rounded-note border border-line"><Splash label="Getting your invoices" /></div>
+          </div>
         </Section>
 
         <Section id="images" title="Images and avatars">
