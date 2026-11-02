@@ -1,7 +1,6 @@
 // Generates the Billy logo: outlines the wordmark, writes public/logo.svg,
 // theme/logo.ts (path for <Logo />), favicon.svg and the PNG app icons.
 //   node scripts/gen-logo.mjs            build everything
-//   node scripts/gen-logo.mjs --compare  also write a font comparison sheet (scratch)
 // Re-run after changing FONT / BG below. `npm run icons` is the same command.
 import opentype from "opentype.js";
 import sharp from "sharp";
@@ -12,12 +11,12 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BG = "#1E1B4B"; // theme/tokens.ts `ink`
 const TEXT = "Billy";
-const FONT = "Pacifico-Regular.ttf";
+const FONT = "node_modules/@fontsource/bricolage-grotesque/files/bricolage-grotesque-latin-600-normal.woff"; // Bricolage Grotesque SemiBold, same as Stash and the homepage
 const WIDTH = 72; // wordmark width as % of the 100-unit tile
-const TRACK = 0; // extra letter-spacing, in em
+const TRACK = -0.045; // same as the homepage wordmark (tracking-[-0.045em]) // extra letter-spacing, in em
 
 function outline(fontFile, text, targetWidth, track = TRACK) {
-  const font = (() => { const b = readFileSync(join(root, "scripts/fonts", fontFile)); return opentype.parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); })();
+  const font = (() => { const b = readFileSync(join(root, fontFile)); return opentype.parse(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); })();
   const size = 100;
   const scale = size / font.unitsPerEm;
   let x = 0;
@@ -58,18 +57,6 @@ const tile = (d, { rounded = true, inset = 1, size = 512 } = {}) => {
   const g = s === 1 ? `<path d="${d}" fill="#fff"/>` : `<path transform="translate(50 50) scale(${s}) translate(-50 -50)" d="${d}" fill="#fff"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}"><rect width="100" height="100"${rounded ? ' rx="22"' : ""} fill="${BG}"/>${g}</svg>`;
 };
-
-if (process.argv.includes("--compare")) {
-  const fonts = ["Pacifico-Regular.ttf", "KaushanScript-Regular.ttf", "CaveatBrush-Regular.ttf"];
-  const cells = fonts.map((f, i) => {
-    const d = outline(f, TEXT, WIDTH);
-    return `<g transform="translate(${i * 110} 0)"><rect width="100" height="100" rx="22" fill="${BG}"/><path d="${d}" fill="#fff"/></g>
-      <g transform="translate(${i * 110 + 34} 112) scale(.32)"><rect width="100" height="100" rx="22" fill="${BG}"/><path d="${d}" fill="#fff"/></g>`;
-  });
-  const out = process.argv[process.argv.indexOf("--compare") + 1] ?? join(root, "compare.png");
-  await sharp(Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 -5 335 155" width="1340" height="620"><rect x="-5" y="-5" width="335" height="155" fill="#fff"/>${cells.join("")}</svg>`)).png().toFile(out);
-  console.log("comparison:", out);
-}
 
 const d = outline(FONT, TEXT, WIDTH);
 

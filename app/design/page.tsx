@@ -151,7 +151,7 @@ function Showcase() {
       </header>
 
       <div className="flex flex-col gap-14">
-        <Section id="logo" title="Logo" intro="Pacifico wordmark outlined to a path, white on ink. Regenerate with npm run icons (scripts/gen-logo.mjs).">
+        <Section id="logo" title="Logo" intro="Bricolage Grotesque SemiBold wordmark outlined to a path, white on ink. Regenerate with npm run icons (scripts/gen-logo.mjs).">
           <div className="flex items-end gap-6">
             <Logo size={96} />
             <Logo size={48} />
