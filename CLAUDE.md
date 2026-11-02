@@ -43,6 +43,8 @@ Five layers, modelled on the Stash app:
 4. **Overlays** (`components/ui/Dialog.tsx` → `Overlay`). Sheets and dialogs portal into `#app-overlays` inside the chassis (not native `<dialog>`, which escapes the phone frame). `Overlay` handles focus trap, Esc, click-outside, focus restore, and makes underneath content `inert` via `lib/overlay-stack.ts`. Frosted panels: `bg-white/95 backdrop-blur-md shadow-float`.
 5. **Ergonomics.** Money is entered with the in-app `Keypad` via `AmountField` (no phone keyboard). Quantities use `Stepper`. Primary actions sit in screen footers (thumb zone). Haptics via `lib/haptics.ts` (`tap()` on primary buttons, chips, keys; `success()` on saves/mark paid). Toasts drop in below the top bar; passive toasts are click-through.
 
+Logo: "Billy" in Pacifico, outlined to a path, white on `ink` tile. `npm run icons` (`scripts/gen-logo.mjs`, fonts in `scripts/fonts`) regenerates `public/logo.svg`, `favicon.svg`, `theme/logo.ts` (used by `components/ui/Logo.tsx`) and every PNG in `public/icons`. Never edit those by hand.
+
 PWA: `app/manifest.ts` (standalone, portrait), icons in `public/icons`, `scripts/build-sw.mjs` precaches every exported file (cache-first, ignores query strings), registered in production by `lib/pwa.ts`.
 
 ## Folder structure

@@ -1,5 +1,6 @@
 "use client";
 
+import { Logo } from "@/components/ui/Logo";
 import { useState, type ReactNode } from "react";
 import { CheckCircle, DownloadSimple, MagnifyingGlass, Plus, Receipt, ShareNetwork, WarningCircle } from "@phosphor-icons/react";
 import { InvoiceSheet } from "@/components/invoice/InvoiceSheet";
@@ -150,6 +151,14 @@ function Showcase() {
       </header>
 
       <div className="flex flex-col gap-14">
+        <Section id="logo" title="Logo" intro="Pacifico wordmark outlined to a path, white on ink. Regenerate with npm run icons (scripts/gen-logo.mjs).">
+          <div className="flex items-end gap-6">
+            <Logo size={96} />
+            <Logo size={48} />
+            <Logo size={32} />
+          </div>
+        </Section>
+
         <Section id="colour" title="Colour" intro="Tokens live in theme/tokens.ts and app/globals.css. Components never use hex values.">
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {TOKENS.map((t) => (
